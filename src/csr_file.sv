@@ -3,9 +3,8 @@
 // Trap entry/exit sequencing arrives with the trap unit (Phase 2b).
 `default_nettype none
 
-module csr_file
-    import asicirific_pkg::*;
-(
+import asicirific_pkg::*;
+module csr_file (
     input  wire logic        clk,
     input  wire logic        rst,
 

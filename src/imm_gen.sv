@@ -1,9 +1,8 @@
 // imm_gen.sv — RV32 immediate generator for I/S/B/U/J formats.
 `default_nettype none
 
-module imm_gen
-    import asicirific_pkg::*;
-(
+import asicirific_pkg::*;
+module imm_gen (
     input  wire logic [31:0] inst,
     input  wire imm_sel_t    sel,
     output logic [31:0]      imm

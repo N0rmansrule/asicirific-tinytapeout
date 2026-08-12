@@ -2,9 +2,8 @@
 // ADD, SUB, SLT, SLTU all reuse one 33-bit adder to shorten the critical path.
 `default_nettype none
 
-module alu
-    import asicirific_pkg::*;
-(
+import asicirific_pkg::*;
+module alu (
     input  wire  logic [31:0] a,
     input  wire  logic [31:0] b,
     input  wire  alu_op_t     op,

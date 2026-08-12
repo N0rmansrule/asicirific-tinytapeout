@@ -2,9 +2,8 @@
 // The branch control unit turns these into taken/not-taken per funct3.
 `default_nettype none
 
-module branch_comp
-    import asicirific_pkg::*;
-(
+import asicirific_pkg::*;
+module branch_comp (
     input  wire logic [31:0] rs1,
     input  wire logic [31:0] rs2,
     output br_cmp_t          cmp
