@@ -1,45 +1,48 @@
-# Makefile
-# See https://docs.cocotb.org/en/stable/quickstart.html for more info
+# Makefile — cocotb test runner for the ASICirific TinyTapeout subset.
+# Default simulator is Icarus; uart_boot.sv is listed FIRST as a defensive
+# ordering choice for the Icarus vvp backend.
 
-# defaults
 SIM ?= icarus
-FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
-SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = project.v
+SRC = ../src
 
-ifneq ($(GATES),yes)
+VERILOG_SOURCES += $(SRC)/uart_boot.sv
+VERILOG_SOURCES += $(SRC)/asicirific_pkg.sv
+VERILOG_SOURCES += $(SRC)/alu.sv
+VERILOG_SOURCES += $(SRC)/reg_file.sv
+VERILOG_SOURCES += $(SRC)/imm_gen.sv
+VERILOG_SOURCES += $(SRC)/branch_comp.sv
+VERILOG_SOURCES += $(SRC)/control_unit.sv
+VERILOG_SOURCES += $(SRC)/forwarding_unit.sv
+VERILOG_SOURCES += $(SRC)/hazard_unit.sv
+VERILOG_SOURCES += $(SRC)/load_unit.sv
+VERILOG_SOURCES += $(SRC)/store_unit.sv
+VERILOG_SOURCES += $(SRC)/mul_unit.sv
+VERILOG_SOURCES += $(SRC)/div_unit.sv
+VERILOG_SOURCES += $(SRC)/csr_file.sv
+VERILOG_SOURCES += $(SRC)/core_top.sv
+VERILOG_SOURCES += $(SRC)/gshare_predictor.sv
+VERILOG_SOURCES += $(SRC)/btb.sv
+VERILOG_SOURCES += $(SRC)/ras.sv
+VERILOG_SOURCES += $(SRC)/bp_top.sv
+VERILOG_SOURCES += $(SRC)/jtag_tap.sv
+VERILOG_SOURCES += $(SRC)/riscv_dtm.sv
+VERILOG_SOURCES += $(SRC)/riscv_dm.sv
+VERILOG_SOURCES += $(SRC)/debug_top.sv
+VERILOG_SOURCES += $(SRC)/uart_tx.sv
+VERILOG_SOURCES += $(SRC)/uart_rx.sv
+VERILOG_SOURCES += $(SRC)/uart.sv
+VERILOG_SOURCES += $(SRC)/gpio.sv
+VERILOG_SOURCES += $(SRC)/spram.sv
+VERILOG_SOURCES += $(SRC)/bus_fabric.sv
+VERILOG_SOURCES += $(SRC)/main_soc.sv
+VERILOG_SOURCES += $(SRC)/tt_um_asicirific.sv
+VERILOG_SOURCES += tb.v
 
-# RTL simulation:
-SIM_BUILD				= sim_build/rtl
-VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
+# Icarus needs -g2012 for SystemVerilog
+COMPILE_ARGS += -g2012
 
-else
-
-# Gate level simulation:
-SIM_BUILD				= sim_build/gl
-COMPILE_ARGS    += -DGL_TEST
-COMPILE_ARGS    += -DFUNCTIONAL
-COMPILE_ARGS    += -DUSE_POWER_PINS
-COMPILE_ARGS    += -DSIM
-COMPILE_ARGS    += -DUNIT_DELAY=\#1
-VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v
-VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v
-
-# this gets copied in by the GDS action workflow
-VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
-
-endif
-
-# Allow sharing configuration between design and testbench via `include`:
-COMPILE_ARGS 		+= -I$(SRC_DIR)
-
-# Include the testbench sources:
-VERILOG_SOURCES += $(PWD)/tb.v
 TOPLEVEL = tb
+MODULE   = test
 
-# List test modules to run, separated by commas and without the .py suffix:
-COCOTB_TEST_MODULES = test
-
-# include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim
