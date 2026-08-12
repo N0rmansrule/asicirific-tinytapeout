@@ -18,37 +18,7 @@ project:
   # Every RTL file that the design needs, relative to src/.
   # uart_boot.sv is listed FIRST as a defensive ordering choice.
   source_files:
-    - "uart_boot.sv"
-    - "asicirific_pkg.sv"
-    - "alu.sv"
-    - "reg_file.sv"
-    - "imm_gen.sv"
-    - "branch_comp.sv"
-    - "control_unit.sv"
-    - "forwarding_unit.sv"
-    - "hazard_unit.sv"
-    - "load_unit.sv"
-    - "store_unit.sv"
-    - "mul_unit.sv"
-    - "div_unit.sv"
-    - "csr_file.sv"
-    - "core_top.sv"
-    - "gshare_predictor.sv"
-    - "btb.sv"
-    - "ras.sv"
-    - "bp_top.sv"
-    - "jtag_tap.sv"
-    - "riscv_dtm.sv"
-    - "riscv_dm.sv"
-    - "debug_top.sv"
-    - "uart_tx.sv"
-    - "uart_rx.sv"
-    - "uart.sv"
-    - "gpio.sv"
-    - "spram.sv"
-    - "bus_fabric.sv"
-    - "main_soc.sv"
-    - "tt_um_asicirific.sv"
+    - "project.v"
 
 # Pin assignments. Text shows up on the datasheet page.
 pinout:
