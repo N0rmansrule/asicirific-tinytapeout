@@ -847,6 +847,7 @@ module debug_top (
 	wire rsp_valid;
 	wire [31:0] rsp_rdata;
 	wire [1:0] rsp_status;
+	wire [4:0] tap_ir;
 	jtag_tap u_tap(
 		.tck(tck),
 		.tms(tms),
@@ -858,10 +859,11 @@ module debug_top (
 		.dmi_shift(dmi_shift),
 		.dmi_update(dmi_update),
 		.dmi_tdi(dmi_tdi_w),
-		.dmi_tdo(dmi_tdo_w)
+		.dmi_tdo(dmi_tdo_w),
+		.ir_out(tap_ir)
 	);
-	wire sel_dtmcs = u_tap.ir == 5'h10;
-	wire sel_dmi = u_tap.ir == 5'h11;
+	wire sel_dtmcs = tap_ir == 5'h10;
+	wire sel_dmi = tap_ir == 5'h11;
 	riscv_dtm u_dtm(
 		.tck(tck),
 		.trst_n(trst_n),
@@ -1206,7 +1208,8 @@ module jtag_tap (
 	dmi_shift,
 	dmi_update,
 	dmi_tdi,
-	dmi_tdo
+	dmi_tdo,
+	ir_out
 );
 	reg _sv2v_0;
 	parameter [31:0] IDCODE_VAL = 32'h1a51c1d1;
@@ -1223,6 +1226,9 @@ module jtag_tap (
 	output wire dmi_update;
 	output wire dmi_tdi;
 	input wire dmi_tdo;
+	output wire [4:0] ir_out;
+	reg [IR_BITS - 1:0] ir;
+	assign ir_out = ir;
 	localparam [IR_BITS - 1:0] IR_IDCODE = 5'h01;
 	localparam [IR_BITS - 1:0] IR_DTMCS = 5'h10;
 	localparam [IR_BITS - 1:0] IR_DMI = 5'h11;
@@ -1253,7 +1259,6 @@ module jtag_tap (
 				default: st <= 4'd0;
 			endcase
 	reg [IR_BITS - 1:0] ir_shift;
-	reg [IR_BITS - 1:0] ir;
 	always @(posedge tck or negedge trst_n)
 		if (!trst_n) begin
 			ir_shift <= IR_IDCODE;
