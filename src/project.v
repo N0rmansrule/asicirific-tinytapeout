@@ -2219,11 +2219,13 @@ module uart_boot (
 	reg boot_ok;
 	reg [7:0] status_code;
 	reg status_send;
+	reg status_req;
 	always @(posedge clk) begin
 		mem_we <= 1'b0;
 		boot_done <= 1'b0;
 		boot_err <= 1'b0;
 		full <= 1'b0;
+		status_req <= 1'b0;
 		if (rst) begin
 			st <= (boot_sel ? B_IDLE : B_RUN);
 			boot_active <= boot_sel;
@@ -2297,7 +2299,7 @@ module uart_boot (
 				end
 				B_REPORT: begin
 					status_code <= (boot_ok ? 8'h9d : 8'hee);
-					status_send <= 1'b1;
+					status_req <= 1'b1;
 					if (boot_ok) begin
 						boot_done <= 1'b1;
 						boot_active <= 1'b0;
@@ -2316,10 +2318,14 @@ module uart_boot (
 		tx_start <= 1'b0;
 		if (rst)
 			status_send <= 1'b0;
-		else if (status_send && !tx_busy) begin
-			tx_data <= status_code;
-			tx_start <= 1'b1;
-			status_send <= 1'b0;
+		else begin
+			if (status_req)
+				status_send <= 1'b1;
+			if (status_send && !tx_busy) begin
+				tx_data <= status_code;
+				tx_start <= 1'b1;
+				status_send <= 1'b0;
+			end
 		end
 	end
 endmodule
