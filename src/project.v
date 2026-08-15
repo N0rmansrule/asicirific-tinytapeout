@@ -548,12 +548,19 @@ module core_top (
 	assign redirect = (valid_x && (taken_x != pred_taken_x)) && ((ctrl_x[11] || ctrl_x[10]) || ctrl_x[9]);
 	assign redirect_pc = (taken_x ? target_x : pc_x + 32'd4);
 	wire [31:0] mul_y;
-	mul_unit u_mul(
-		.a(op_a_fwd),
-		.b(op_b_fwd),
-		.funct3(ctrl_x[6-:3]),
-		.y(mul_y)
-	);
+	generate
+		if (ENABLE_M) begin : g_mul
+			mul_unit u_mul(
+				.a(op_a_fwd),
+				.b(op_b_fwd),
+				.funct3(ctrl_x[6-:3]),
+				.y(mul_y)
+			);
+		end
+		else begin : g_nomul
+			assign mul_y = 32'd0;
+		end
+	endgenerate
 	wire div_busy;
 	wire div_done;
 	reg div_started_q;
@@ -567,17 +574,26 @@ module core_top (
 			div_started_q <= 1'b1;
 		else if (!stall)
 			div_started_q <= 1'b0;
-	div_unit u_div(
-		.clk(clk),
-		.rst(rst),
-		.start(div_start),
-		.a(op_a_fwd),
-		.b(op_b_fwd),
-		.funct3(ctrl_x[6-:3]),
-		.busy(div_busy),
-		.done(div_done),
-		.y(div_y)
-	);
+	generate
+		if (ENABLE_M) begin : g_div
+			div_unit u_div(
+				.clk(clk),
+				.rst(rst),
+				.start(div_start),
+				.a(op_a_fwd),
+				.b(op_b_fwd),
+				.funct3(ctrl_x[6-:3]),
+				.busy(div_busy),
+				.done(div_done),
+				.y(div_y)
+			);
+		end
+		else begin : g_nodiv
+			assign div_busy = 1'b0;
+			assign div_done = 1'b1;
+			assign div_y = 32'd0;
+		end
+	endgenerate
 	wire [31:0] csr_rval;
 	wire csr_en = (valid_x && ctrl_x[3]) && !stall;
 	wire [31:0] csr_wval = (ctrl_x[2] ? {27'd0, rs1_x} : op_a_fwd);
@@ -687,20 +703,28 @@ module core_top (
 	end
 	assign rd_w = (valid_w && ctrl_w[23] ? rd_w_q : 5'd0);
 	assign rf_we_w = valid_w && ctrl_w[23];
-	bp_top u_bp(
-		.clk(clk),
-		.rst(rst),
-		.pc_if(pc_f1),
-		.pred_taken(pred_taken_f1),
-		.pred_target(pred_target_f1),
-		.upd_valid((valid_x && ((ctrl_x[11] || ctrl_x[10]) || ctrl_x[9])) && !stall),
-		.upd_pc(pc_x),
-		.upd_taken(taken_x),
-		.upd_target(target_x),
-		.ras_push(1'b0),
-		.ras_push_addr(32'd0),
-		.ras_pop(1'b0)
-	);
+	generate
+		if (ENABLE_BP) begin : g_bp
+			bp_top u_bp(
+				.clk(clk),
+				.rst(rst),
+				.pc_if(pc_f1),
+				.pred_taken(pred_taken_f1),
+				.pred_target(pred_target_f1),
+				.upd_valid((valid_x && ((ctrl_x[11] || ctrl_x[10]) || ctrl_x[9])) && !stall),
+				.upd_pc(pc_x),
+				.upd_taken(taken_x),
+				.upd_target(target_x),
+				.ras_push(1'b0),
+				.ras_push_addr(32'd0),
+				.ras_pop(1'b0)
+			);
+		end
+		else begin : g_nobp
+			assign pred_taken_f1 = 1'b0;
+			assign pred_target_f1 = 32'd0;
+		end
+	endgenerate
 	assign dbg_halted = dbg_halt_req;
 	initial _sv2v_0 = 0;
 endmodule
@@ -1368,7 +1392,7 @@ module main_soc (
 	boot_done
 );
 	reg _sv2v_0;
-	parameter [31:0] RAM_WORDS = 512;
+	parameter [31:0] RAM_WORDS = 64;
 	parameter [0:0] RV32M = 1'b1;
 	input wire clk;
 	input wire rst;
@@ -1420,7 +1444,7 @@ module main_soc (
 	wire core_rst = rst || !core_run;
 	core_top #(
 		.RESET_PC(32'h10000000),
-		.ENABLE_BP(1'b1),
+		.ENABLE_BP(1'b0),
 		.ENABLE_M(RV32M)
 	) u_core(
 		.clk(clk),
@@ -2031,7 +2055,7 @@ module tt_um_asicirific (
 	wire [7:0] m_gpio_oe;
 	assign m_gpio_in = {5'd0, ui_in[4:2]};
 	main_soc #(
-		.RAM_WORDS(512),
+		.RAM_WORDS(64),
 		.RV32M(1'b0)
 	) u_soc(
 		.clk(clk),
