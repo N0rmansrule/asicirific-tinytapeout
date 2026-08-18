@@ -1,13 +1,13 @@
 # Tiny Tapeout project information
 project:
   title:        "ASICirific serial RV32E MCU"
-  author:       "Thomas J. Norman"
+  author:       "Aleksander J. Norman"
   discord:      ""
   description:  "Bit-serial RV32E microcontroller: CPU + QSPI controller for external flash/PSRAM + GPIO"
   language:     "Verilog"
   clock_hz:     25000000
 
-  tiles: "4x2"
+  tiles: "3x2"
 
   top_module:  "tt_um_asicirific"
 
