@@ -1,5 +1,108 @@
 `default_nettype none
 `default_nettype none
+module serial_alu (
+	clk,
+	rst,
+	init,
+	en,
+	op,
+	a,
+	b,
+	y,
+	last_cout
+);
+	reg _sv2v_0;
+	input wire clk;
+	input wire rst;
+	input wire init;
+	input wire en;
+	input wire [3:0] op;
+	input wire a;
+	input wire b;
+	output reg y;
+	output wire last_cout;
+	wire sub = ((op == 4'd1) || (op == 4'd5)) || (op == 4'd6);
+	wire bb = (sub ? ~b : b);
+	reg carry;
+	wire cin = (init ? (sub ? 1'b1 : 1'b0) : carry);
+	wire sum = (a ^ bb) ^ cin;
+	wire cout = ((a & bb) | (a & cin)) | (bb & cin);
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		(* full_case, parallel_case *)
+		case (op)
+			4'd2: y = a & b;
+			4'd3: y = a | b;
+			4'd4: y = a ^ b;
+			default: y = sum;
+		endcase
+	end
+	assign last_cout = cout;
+	always @(posedge clk)
+		if (rst)
+			carry <= 1'b0;
+		else if (en)
+			carry <= cout;
+	initial _sv2v_0 = 0;
+endmodule
+`default_nettype none
+module serial_rf (
+	clk,
+	rst,
+	en,
+	rs1,
+	rs2,
+	rd,
+	we,
+	wbit,
+	shl,
+	shr,
+	shin,
+	rs1_bit,
+	rs2_bit,
+	rd_msb
+);
+	input wire clk;
+	input wire rst;
+	input wire en;
+	input wire [3:0] rs1;
+	input wire [3:0] rs2;
+	input wire [3:0] rd;
+	input wire we;
+	input wire wbit;
+	input wire shl;
+	input wire shr;
+	input wire shin;
+	output wire rs1_bit;
+	output wire rs2_bit;
+	output wire rd_msb;
+	reg [31:0] sr [15:0];
+	assign rs1_bit = (rs1 == 4'd0 ? 1'b0 : sr[rs1][0]);
+	assign rs2_bit = (rs2 == 4'd0 ? 1'b0 : sr[rs2][0]);
+	assign rd_msb = sr[rd][31];
+	integer i;
+	always @(posedge clk)
+		if (rst)
+			for (i = 0; i < 16; i = i + 1)
+				sr[i] <= 32'd0;
+		else if (shl || shr) begin
+			if (rd != 4'd0) begin
+				if (shr)
+					sr[rd] <= {shin, sr[rd][31:1]};
+				else
+					sr[rd] <= {sr[rd][30:0], 1'b0};
+			end
+		end
+		else if (en) begin
+			for (i = 0; i < 16; i = i + 1)
+				if ((we && (rd != 4'd0)) && (i == rd))
+					sr[i] <= {wbit, sr[i][31:1]};
+				else
+					sr[i] <= {sr[i][0], sr[i][31:1]};
+		end
+endmodule
+`default_nettype none
 module branch_comp (
 	funct3,
 	zero,
@@ -27,58 +130,6 @@ module branch_comp (
 			default: taken = 1'b0;
 		endcase
 	end
-	initial _sv2v_0 = 0;
-endmodule
-`default_nettype none
-module gpio (
-	clk,
-	rst,
-	addr,
-	wdata,
-	we,
-	rdata,
-	gpio_out,
-	gpio_in,
-	gpio_oe
-);
-	reg _sv2v_0;
-	input wire clk;
-	input wire rst;
-	input wire [3:0] addr;
-	input wire [31:0] wdata;
-	input wire we;
-	output reg [31:0] rdata;
-	output wire [31:0] gpio_out;
-	input wire [31:0] gpio_in;
-	output wire [31:0] gpio_oe;
-	reg [31:0] out_q;
-	reg [31:0] oe_q;
-	assign gpio_out = out_q;
-	assign gpio_oe = oe_q;
-	always @(*) begin
-		if (_sv2v_0)
-			;
-		(* full_case, parallel_case *)
-		case (addr)
-			4'h0: rdata = out_q;
-			4'h1: rdata = gpio_in;
-			4'h2: rdata = oe_q;
-			default: rdata = 32'd0;
-		endcase
-	end
-	always @(posedge clk)
-		if (rst) begin
-			out_q <= 32'd0;
-			oe_q <= 32'd0;
-		end
-		else if (we)
-			(* full_case, parallel_case *)
-			case (addr)
-				4'h0: out_q <= wdata;
-				4'h2: oe_q <= wdata;
-				default:
-					;
-			endcase
 	initial _sv2v_0 = 0;
 endmodule
 `default_nettype none
@@ -138,114 +189,38 @@ module load_unit (
 	initial _sv2v_0 = 0;
 endmodule
 `default_nettype none
-module mem_bus (
-	clk,
-	rst,
-	c_addr,
-	c_wdata,
-	c_be,
-	c_we,
-	c_re,
-	c_rdata,
-	c_ready,
-	m_addr,
-	m_wdata,
-	m_be,
-	m_we,
-	m_re,
-	m_rdata,
-	m_ready,
-	g_addr,
-	g_wdata,
-	g_we,
-	g_rdata,
-	sel_gpio_o
-);
-	input wire clk;
-	input wire rst;
-	input wire [31:0] c_addr;
-	input wire [31:0] c_wdata;
-	input wire [3:0] c_be;
-	input wire c_we;
-	input wire c_re;
-	output wire [31:0] c_rdata;
-	output wire c_ready;
-	output wire [31:0] m_addr;
-	output wire [31:0] m_wdata;
-	output wire [3:0] m_be;
-	output wire m_we;
-	output wire m_re;
-	input wire [31:0] m_rdata;
-	input wire m_ready;
-	output wire [3:0] g_addr;
-	output wire [31:0] g_wdata;
-	output wire g_we;
-	input wire [31:0] g_rdata;
-	output wire sel_gpio_o;
-	wire is_gpio = c_addr[31:24] == 8'h02;
-	assign sel_gpio_o = is_gpio;
-	assign m_addr = c_addr;
-	assign m_wdata = c_wdata;
-	assign m_be = c_be;
-	assign m_we = c_we && !is_gpio;
-	assign m_re = c_re && !is_gpio;
-	assign g_addr = c_addr[5:2];
-	assign g_wdata = c_wdata;
-	assign g_we = c_we && is_gpio;
-	reg gpio_ready;
-	always @(posedge clk)
-		if (rst)
-			gpio_ready <= 1'b0;
-		else
-			gpio_ready <= ((c_re || c_we) && is_gpio) && !gpio_ready;
-	assign c_rdata = (is_gpio ? g_rdata : m_rdata);
-	assign c_ready = (is_gpio ? gpio_ready : m_ready);
-endmodule
-`default_nettype none
-module serial_alu (
-	clk,
-	rst,
-	init,
-	en,
-	op,
-	a,
-	b,
-	y,
-	last_cout
+module store_unit (
+	wdata_in,
+	addr_lo,
+	funct3,
+	wdata_out,
+	be
 );
 	reg _sv2v_0;
-	input wire clk;
-	input wire rst;
-	input wire init;
-	input wire en;
-	input wire [3:0] op;
-	input wire a;
-	input wire b;
-	output reg y;
-	output wire last_cout;
-	wire sub = ((op == 4'd1) || (op == 4'd5)) || (op == 4'd6);
-	wire bb = (sub ? ~b : b);
-	reg carry;
-	wire cin = (init ? (sub ? 1'b1 : 1'b0) : carry);
-	wire sum = (a ^ bb) ^ cin;
-	wire cout = ((a & bb) | (a & cin)) | (bb & cin);
+	input wire [31:0] wdata_in;
+	input wire [1:0] addr_lo;
+	input wire [2:0] funct3;
+	output reg [31:0] wdata_out;
+	output reg [3:0] be;
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		(* full_case, parallel_case *)
-		case (op)
-			4'd2: y = a & b;
-			4'd3: y = a | b;
-			4'd4: y = a ^ b;
-			default: y = sum;
+		case (funct3[1:0])
+			2'b00: begin
+				wdata_out = {4 {wdata_in[7:0]}};
+				be = 4'b0001 << addr_lo;
+			end
+			2'b01: begin
+				wdata_out = {2 {wdata_in[15:0]}};
+				be = (addr_lo[1] ? 4'b1100 : 4'b0011);
+			end
+			default: begin
+				wdata_out = wdata_in;
+				be = 4'b1111;
+			end
 		endcase
 	end
-	assign last_cout = cout;
-	always @(posedge clk)
-		if (rst)
-			carry <= 1'b0;
-		else if (en)
-			carry <= cout;
 	initial _sv2v_0 = 0;
 endmodule
 `default_nettype none
@@ -580,62 +555,6 @@ module serial_core (
 	initial _sv2v_0 = 0;
 endmodule
 `default_nettype none
-module serial_rf (
-	clk,
-	rst,
-	en,
-	rs1,
-	rs2,
-	rd,
-	we,
-	wbit,
-	shl,
-	shr,
-	shin,
-	rs1_bit,
-	rs2_bit,
-	rd_msb
-);
-	input wire clk;
-	input wire rst;
-	input wire en;
-	input wire [3:0] rs1;
-	input wire [3:0] rs2;
-	input wire [3:0] rd;
-	input wire we;
-	input wire wbit;
-	input wire shl;
-	input wire shr;
-	input wire shin;
-	output wire rs1_bit;
-	output wire rs2_bit;
-	output wire rd_msb;
-	reg [31:0] sr [15:0];
-	assign rs1_bit = (rs1 == 4'd0 ? 1'b0 : sr[rs1][0]);
-	assign rs2_bit = (rs2 == 4'd0 ? 1'b0 : sr[rs2][0]);
-	assign rd_msb = sr[rd][31];
-	integer i;
-	always @(posedge clk)
-		if (rst)
-			for (i = 0; i < 16; i = i + 1)
-				sr[i] <= 32'd0;
-		else if (shl || shr) begin
-			if (rd != 4'd0) begin
-				if (shr)
-					sr[rd] <= {shin, sr[rd][31:1]};
-				else
-					sr[rd] <= {sr[rd][30:0], 1'b0};
-			end
-		end
-		else if (en) begin
-			for (i = 0; i < 16; i = i + 1)
-				if ((we && (rd != 4'd0)) && (i == rd))
-					sr[i] <= {wbit, sr[i][31:1]};
-				else
-					sr[i] <= {sr[i][0], sr[i][31:1]};
-		end
-endmodule
-`default_nettype none
 module spi_mem (
 	clk,
 	rst,
@@ -788,39 +707,120 @@ module spi_mem (
 	initial _sv2v_0 = 0;
 endmodule
 `default_nettype none
-module store_unit (
-	wdata_in,
-	addr_lo,
-	funct3,
-	wdata_out,
-	be
+module gpio (
+	clk,
+	rst,
+	addr,
+	wdata,
+	we,
+	rdata,
+	gpio_out,
+	gpio_in,
+	gpio_oe
 );
 	reg _sv2v_0;
-	input wire [31:0] wdata_in;
-	input wire [1:0] addr_lo;
-	input wire [2:0] funct3;
-	output reg [31:0] wdata_out;
-	output reg [3:0] be;
+	input wire clk;
+	input wire rst;
+	input wire [3:0] addr;
+	input wire [31:0] wdata;
+	input wire we;
+	output reg [31:0] rdata;
+	output wire [31:0] gpio_out;
+	input wire [31:0] gpio_in;
+	output wire [31:0] gpio_oe;
+	reg [31:0] out_q;
+	reg [31:0] oe_q;
+	assign gpio_out = out_q;
+	assign gpio_oe = oe_q;
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		(* full_case, parallel_case *)
-		case (funct3[1:0])
-			2'b00: begin
-				wdata_out = {4 {wdata_in[7:0]}};
-				be = 4'b0001 << addr_lo;
-			end
-			2'b01: begin
-				wdata_out = {2 {wdata_in[15:0]}};
-				be = (addr_lo[1] ? 4'b1100 : 4'b0011);
-			end
-			default: begin
-				wdata_out = wdata_in;
-				be = 4'b1111;
-			end
+		case (addr)
+			4'h0: rdata = out_q;
+			4'h1: rdata = gpio_in;
+			4'h2: rdata = oe_q;
+			default: rdata = 32'd0;
 		endcase
 	end
+	always @(posedge clk)
+		if (rst) begin
+			out_q <= 32'd0;
+			oe_q <= 32'd0;
+		end
+		else if (we)
+			(* full_case, parallel_case *)
+			case (addr)
+				4'h0: out_q <= wdata;
+				4'h2: oe_q <= wdata;
+				default:
+					;
+			endcase
 	initial _sv2v_0 = 0;
+endmodule
+`default_nettype none
+module mem_bus (
+	clk,
+	rst,
+	c_addr,
+	c_wdata,
+	c_be,
+	c_we,
+	c_re,
+	c_rdata,
+	c_ready,
+	m_addr,
+	m_wdata,
+	m_be,
+	m_we,
+	m_re,
+	m_rdata,
+	m_ready,
+	g_addr,
+	g_wdata,
+	g_we,
+	g_rdata,
+	sel_gpio_o
+);
+	input wire clk;
+	input wire rst;
+	input wire [31:0] c_addr;
+	input wire [31:0] c_wdata;
+	input wire [3:0] c_be;
+	input wire c_we;
+	input wire c_re;
+	output wire [31:0] c_rdata;
+	output wire c_ready;
+	output wire [31:0] m_addr;
+	output wire [31:0] m_wdata;
+	output wire [3:0] m_be;
+	output wire m_we;
+	output wire m_re;
+	input wire [31:0] m_rdata;
+	input wire m_ready;
+	output wire [3:0] g_addr;
+	output wire [31:0] g_wdata;
+	output wire g_we;
+	input wire [31:0] g_rdata;
+	output wire sel_gpio_o;
+	wire is_gpio = c_addr[31:24] == 8'h02;
+	assign sel_gpio_o = is_gpio;
+	assign m_addr = c_addr;
+	assign m_wdata = c_wdata;
+	assign m_be = c_be;
+	assign m_we = c_we && !is_gpio;
+	assign m_re = c_re && !is_gpio;
+	assign g_addr = c_addr[5:2];
+	assign g_wdata = c_wdata;
+	assign g_we = c_we && is_gpio;
+	reg gpio_ready;
+	always @(posedge clk)
+		if (rst)
+			gpio_ready <= 1'b0;
+		else
+			gpio_ready <= ((c_re || c_we) && is_gpio) && !gpio_ready;
+	assign c_rdata = (is_gpio ? g_rdata : m_rdata);
+	assign c_ready = (is_gpio ? gpio_ready : m_ready);
 endmodule
 `default_nettype none
 module tt_um_asicirific (
